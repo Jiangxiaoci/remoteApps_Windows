@@ -1,12 +1,12 @@
 #include "widget.h"
-
+#include <QFileSystemWatcher>
 #include <QApplication>
-
+#include "QDragEnterEvent"
+#include "QDropEvent"
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     Widget w;
     w.show();
     return a.exec();
-    //this is a test
 }
