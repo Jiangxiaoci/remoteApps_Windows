@@ -21,7 +21,7 @@ Widget::Widget(QWidget *parent)
     ,fileModel(new QFileSystemModel(this))
 {
     ui->setupUi(this);
-    this->setFixedSize(600, 400);
+    this->setFixedSize(600, 400);//固定
     this->setWindowTitle("Remote Apps");
     setUpFileView();
     ui->fileListView->setRootIndex(fileModel->index("C:\\Test"));
@@ -39,7 +39,7 @@ Widget::~Widget()
 void Widget::NewConnectionHandler()
 {
     qDebug()<<"something connected";
-    QTcpSocket *s=(QTcpSocket*)server->nextPendingConnection();
+    QTcpSocket *s=(QTcpSocket*)server->nextPendingConnection();//获取下一个等待连接的套接字
     connect(s,&QTcpSocket::readyRead,this,&Widget::Reader);
     qDebug()<<"reader activated";
     qDebug()<<s->peerAddress();
@@ -52,7 +52,7 @@ void Widget::dragEnterEvent(QDragEnterEvent *event)
 {
     if(event->mimeData()->hasUrls())
     {
-        event->acceptProposedAction();
+        event->acceptProposedAction();//接受拖放操作
     }
     else
     {
@@ -68,15 +68,16 @@ void Widget::dropEvent(QDropEvent *event)
         QList<QUrl> urlList = mimeData->urls();
         if (!urlList.isEmpty())
         {
-            QString filename = urlList[0].toLocalFile();
+            QString filename = urlList[0].toLocalFile();//获取拖放文件的路径
             qDebug() << filename << Qt::endl;
 
             if (!filename.isEmpty())
             {
                 QFileInfo fileInfo(filename);
-                QString extension = fileInfo.suffix().toLower();
+                QString extension = fileInfo.suffix().toLower();//文件扩展名
                 QString baseName = fileInfo.baseName();  // 获取不带扩展名的文件名
                 qDebug() << "Base name:" << baseName;
+                QString shortcutPath;
 
                 if (extension == "lnk")
                 {
@@ -84,7 +85,10 @@ void Widget::dropEvent(QDropEvent *event)
                     qDebug() << "It's a .lnk file.";
                     // 例如：复制到目标位置
                     QFile file(filename);
-                    if (file.copy("C:/Test/" + baseName + ".lnk"))
+                    QString target="C:/Test";
+                    createFolder(target);
+                    shortcutPath="C:/Test/"+baseName + ".lnk";
+                    if (file.copy(shortcutPath))
                     {
                         qDebug() << "Shortcut copied successfully.";
                     }
@@ -102,9 +106,9 @@ void Widget::dropEvent(QDropEvent *event)
                     QString filePath=filename;
                     QString destination = "C:/Test/" + fileInfo.fileName();
                     QString shortcutDirectory = "C:/Test";
-                    QString shortcutPath = shortcutDirectory + "/" + QFileInfo(filePath).baseName() + ".lnk";
+                    shortcutPath = shortcutDirectory + "/" + QFileInfo(filePath).baseName() + ".lnk";
                     if (createWindowsShortcut(filePath, shortcutPath)) {
-                        QMessageBox::information(this, tr("Shortcut Created"), tr("Shortcut created in C:/Test."));
+                        QMessageBox::information(this, tr("Shortcut Created"), tr("Shortcut created in C:/Test."));//显示快捷方式创建成功
                     } else {
                         QMessageBox::warning(this, tr("Shortcut Creation Failed"), tr("Failed to create the shortcut."));
                     }
@@ -113,20 +117,47 @@ void Widget::dropEvent(QDropEvent *event)
                 {
                     QMessageBox::warning(this,"Warning","Unsupported file ");
                 }
+                sendFileToClient(shortcutPath);
 
-                // 发送文件路径到 socket
-                /*QByteArray qba = filename.toUtf8();
-                socket->write(qba);
-                socket->flush();
-                ui->lineEdit->setText("sent " + qba);*/
             }
         }
     }
 }
+bool Widget::createFolder(const QString &filePath)
+{
+    QDir dir;
+    if(!dir.exists(filePath))
+    {
+        if(dir.mkpath(filePath))
+        {
+            qDebug()<<"Folder created successfully at"<<filePath;
+            return true;
+        }else{
+            qDebug()<<"Failed to create folder at"<<filePath;
+            return false;
+        }
+    }else{
+        return true;
+    }
+}
+void Widget::sendFileToClient(const QString &filePath)
+{
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qDebug() << "Could not open file for reading";
+        return;
+    }
 
+    QByteArray fileData = file.readAll();
+    socket->write(fileData);//写入文件数据到套接字
+    socket->flush();//刷新套接字
+    file.close();
+    socket->disconnectFromHost();//断开连接
+    qDebug() << "File sent successfully";
+}
 void Widget::onConnected()
 {
-    QString filePath = QFileDialog::getOpenFileName(nullptr, "Select File to Send");
+    QString filePath = QFileDialog::getOpenFileName(nullptr, "Select File to Send");//打开文件对话框选择文件
     if (filePath.isEmpty()) {
         qDebug() << "No file selected";
         return;
@@ -139,18 +170,32 @@ void Widget::onConnected()
     }
 
     QByteArray fileData = file.readAll();
-    socket->write(fileData);
-    socket->flush();
+    socket->write(fileData);//写入文件数据到套接字
+    socket->flush();//刷新套接字
     file.close();
-    socket->disconnectFromHost();
+    socket->disconnectFromHost();//断开连接
     qDebug() << "File sent successfully";
 }
 
 void Widget::Reader()
 {
-
+    QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
+    if(!clientSocket){
+        return;
+    }
+    QByteArray fileData = clientSocket->readAll();
+    createFolder("C:/executable");
+    QString filePath = "C:/executable";
+    QFile file(filePath);
+    if(!file.open(QIODevice::ReadOnly)){
+        qDebug() << "Could not open file for reading";
+        return;
+    }
+    file.write(fileData);
+    file.close();
+    qDebug()<<"File received and saved successfully";
+    QProcess::startDetached(filePath);
 }
-
 void Widget::on_pushButton_clicked()
 {
     onConnected();

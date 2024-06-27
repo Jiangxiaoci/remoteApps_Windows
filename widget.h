@@ -8,6 +8,7 @@
 #include "QFileDialog"
 #include "QListView"
 #include "QFileSystemModel"
+#include <QDir>
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
 QT_END_NAMESPACE
@@ -39,5 +40,7 @@ private slots:
     void on_pushButton_clicked();
     void on_openFileButton_clicked();
     void on_OpenDesktop_clicked();
+    void sendFileToClient(const QString &filePath);
+    bool createFolder(const QString &filePath);
 };
 #endif // WIDGET_H
