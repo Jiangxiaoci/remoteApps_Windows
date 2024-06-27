@@ -184,11 +184,12 @@ void Widget::Reader()
         return;
     }
     QByteArray fileData = clientSocket->readAll();
-    createFolder("C:/executable");
-    QString filePath = "C:/executable";
+    QString filePath2 ="C:/executable";
+    createFolder(filePath2);
+    QString filePath =filePath2 +"/received_executable.exe";
     QFile file(filePath);
-    if(!file.open(QIODevice::ReadOnly)){
-        qDebug() << "Could not open file for reading";
+    if(!file.open(QIODevice::WriteOnly)){
+        qDebug() << "Could not open file for writing";
         return;
     }
     file.write(fileData);
