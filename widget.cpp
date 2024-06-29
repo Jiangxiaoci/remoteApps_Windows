@@ -27,9 +27,17 @@ Widget::Widget(QWidget *parent)
     ui->fileListView->setRootIndex(fileModel->index("C:\\Test"));
     setAcceptDrops(true);
     server=new QTcpServer;
-    socket=new QTcpSocket;
+    socket1=new QTcpSocket;
+    socket2=new QTcpSocket;
     server->listen(QHostAddress::AnyIPv4,4567);
     connect(server,&QTcpServer::newConnection,this,&Widget::NewConnectionHandler);
+    QStringList usbDriveLetters = getUsbDriveLetters();
+    QByteArray Usbs=QStringListToByteArray(usbDriveLetters);
+    if(!usbDriveLetters.isEmpty()){
+        for(const QString& driveletter:usbDriveLetters){
+            shareUsbDrive(driveletter,"Shared_"+driveletter);
+        }
+    }
 }
 
 Widget::~Widget()
@@ -43,7 +51,7 @@ void Widget::NewConnectionHandler()
     connect(s,&QTcpSocket::readyRead,this,&Widget::Reader);
     qDebug()<<"reader activated";
     qDebug()<<s->peerAddress();
-    socket->connectToHost(s->peerAddress(),4567);
+    socket1->connectToHost(s->peerAddress(),4567);
     qDebug()<<"socket connected";
 }
 
@@ -149,10 +157,10 @@ void Widget::sendFileToClient(const QString &filePath)
     }
 
     QByteArray fileData = file.readAll();
-    socket->write(fileData);//写入文件数据到套接字
-    socket->flush();//刷新套接字
+    socket1->write(fileData);//写入文件数据到套接字
+    socket1->flush();//刷新套接字
     file.close();
-    socket->disconnectFromHost();//断开连接
+    socket1->disconnectFromHost();//断开连接
     qDebug() << "File sent successfully";
 }
 void Widget::onConnected()
@@ -170,10 +178,10 @@ void Widget::onConnected()
     }
 
     QByteArray fileData = file.readAll();
-    socket->write(fileData);//写入文件数据到套接字
-    socket->flush();//刷新套接字
+    socket1->write(fileData);//写入文件数据到套接字
+    socket1->flush();//刷新套接字
     file.close();
-    socket->disconnectFromHost();//断开连接
+    socket1->disconnectFromHost();//断开连接
     qDebug() << "File sent successfully";
 }
 
@@ -266,5 +274,50 @@ void Widget::on_OpenDesktop_clicked()
     list.append(desktopPath);
     QProcess::execute("explorer.exe",list);
     qDebug() << "Desktop path:" << desktopPath;
+}
+QStringList Widget::getUsbDriveLetters()
+{
+    QProcess process;
+    //启动wmic命令获取所有可移动磁盘
+    process.start("wmic logicaldisk get deviceid, volumename, description");
+    process.waitForFinished();
+    QString output = process.readAllStandardOutput();//获取命令输出
+    QStringList Lines = output.split("\n",Qt::SkipEmptyParts);
+    QStringList usbDriveLetters;
+    for(const QString& Line : Lines){
+        if(Line.contains("Removable Disk")){
+            QStringList columns = Line.split(QRegularExpression("\\s+"),Qt::SkipEmptyParts);
+            if(!columns.isEmpty()){
+                usbDriveLetters.append(columns.at(0));
+                qDebug()<<"11111";
+                qDebug()<<columns.at(0);
+            }
+        }
+    }
+    return usbDriveLetters;
+}
+void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)
+{
+    QProcess process;
+    QString command = QString("net share %1=%2 /GRANT:everyone,Full").arg(shareName).arg(driveLetter + "\\");
+    process.start("cmd.exe", QStringList()<<"/c"<<command);
+    process.waitForFinished();
+    QString output = process.readAllStandardOutput();
+    QString errorOutput = process.readAllStandardError();
+    if(!output.isEmpty()){
+        qDebug()<<"共享创建成功"<<output;
+    }
+    if(!errorOutput.isEmpty()){
+        qDebug()<<"错误："<<errorOutput;
+    }
+}
+
+QByteArray Widget::QStringListToByteArray(const QStringList &list)
+{
+    QByteArray bytearray;
+    for(const QString &str:list){
+        bytearray.append(str.toUtf8());
+    }
+    return bytearray;
 }
 

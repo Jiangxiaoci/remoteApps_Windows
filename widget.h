@@ -9,6 +9,10 @@
 #include "QListView"
 #include "QFileSystemModel"
 #include <QDir>
+#include<QCoreApplication>
+#include<QProcess>
+#include<QStringList>
+#include<QString>
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
 QT_END_NAMESPACE
@@ -33,14 +37,18 @@ protected:
     void Reader();
     void openFolderDialog();
     void setUpFileView();
-    QTcpSocket *socket;
+    void sendFileToClient(const QString &filePath);
+    bool createFolder(const QString &filePath);
+    QStringList getUsbDriveLetters();
+    void shareUsbDrive(const QString &driveLetter,const QString &shareName);
+    QTcpSocket *socket1;
+    QTcpSocket *socket2;
     QTcpServer *server;
+    QByteArray QStringListToByteArray(const QStringList &list);
 
 private slots:
     void on_pushButton_clicked();
     void on_openFileButton_clicked();
     void on_OpenDesktop_clicked();
-    void sendFileToClient(const QString &filePath);
-    bool createFolder(const QString &filePath);
 };
 #endif // WIDGET_H
