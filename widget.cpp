@@ -277,24 +277,22 @@ void Widget::on_OpenDesktop_clicked()
 }
 QStringList Widget::getUsbDriveLetters()
 {
+    QString command = "wmic logicaldisk where drivetype=2 get deviceid";
     QProcess process;
-    //启动wmic命令获取所有可移动磁盘
-    process.start("wmic logicaldisk get deviceid, volumename, description");
+    process.start(command);
     process.waitForFinished();
-    QString output = process.readAllStandardOutput();//获取命令输出
-    QStringList Lines = output.split("\n",Qt::SkipEmptyParts);
-    QStringList usbDriveLetters;
-    for(const QString& Line : Lines){
-        if(Line.contains("Removable Disk")){
-            QStringList columns = Line.split(QRegularExpression("\\s+"),Qt::SkipEmptyParts);
-            if(!columns.isEmpty()){
-                usbDriveLetters.append(columns.at(0));
-                qDebug()<<"11111";
-                qDebug()<<columns.at(0);
-            }
-        }
+    QByteArray result=process.readAllStandardOutput();
+    qDebug()<<result;
+    QString Output=QString::fromLocal8Bit(result);
+    qDebug()<<Output;
+    QStringList drives = Output.split("\r\n",Qt::SkipEmptyParts);
+    QStringList usbdriveletters;
+    qDebug()<<"Removable drives:";
+    for(const QString &drive:drives){
+        qDebug()<<drive.trimmed();
+        usbdriveletters.append(drive.trimmed());
     }
-    return usbDriveLetters;
+    return usbdriveletters;
 }
 void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)
 {
@@ -308,7 +306,7 @@ void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)
         qDebug()<<"共享创建成功"<<output;
     }
     if(!errorOutput.isEmpty()){
-        qDebug()<<"错误："<<errorOutput;
+
     }
 }
 
