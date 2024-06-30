@@ -15,6 +15,7 @@
 #include<QString>
 #include<QStorageInfo>
 #include<windows.h>
+#include<QtGlobal>
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
 QT_END_NAMESPACE
@@ -48,6 +49,7 @@ protected:
     QTcpServer *server;
     QByteArray QStringListToByteArray(const QStringList &list);
     bool isRemovableDrive(const QString &drivePath);
+    void unShareUsbDrive(const QString &letter);
 
 private slots:
     void on_pushButton_clicked();

@@ -33,10 +33,21 @@ Widget::Widget(QWidget *parent)
     connect(server,&QTcpServer::newConnection,this,&Widget::NewConnectionHandler);
     QStringList usbDriveLetters = getUsbDriveLetters();
     QByteArray Usbs=QStringListToByteArray(usbDriveLetters);
-}
+    if(!usbDriveLetters.isEmpty()){
+        for(const QString& driveletter:usbDriveLetters){
 
+            if(!driveletter.isEmpty())
+            {
+            shareUsbDrive(driveletter,driveletter[0]);
+        }
+    }
+}
+}
 Widget::~Widget()
 {
+    for(const QString driveletter:getUsbDriveLetters()) {
+        unShareUsbDrive(driveletter[0]);
+    }
     delete ui;
 }
 void Widget::NewConnectionHandler()
@@ -276,15 +287,22 @@ bool Widget::isRemovableDrive(const QString &drivePath)
     return driveType == DRIVE_REMOVABLE;
 }
 
+void Widget::unShareUsbDrive(const QString &letter)
+{
+    QProcess process;
+    QString command="net share "+letter+" /delete";
+    qDebug()<<command;
+    process.start("cmd", QStringList() << "/c" << command);
+     process.waitForFinished();
+}
 QStringList Widget::getUsbDriveLetters()
 {
     QList<QStorageInfo> storageList = QStorageInfo::mountedVolumes();
     QStringList removable;
     foreach (const QStorageInfo &storage,storageList ) {
         if(isRemovableDrive(storage.rootPath())){
-            qDebug()<<"Removable Drive:"<<storage.rootPath();
+            qDebug()<<"Removable Drive:"<<storage.rootPath().left(2);
             removable.append(storage.rootPath().left(2));
-            shareUsbDrive(storage.rootPath().left(2),storage.rootPath().left(2));
         }
     }
     return removable;
@@ -292,17 +310,19 @@ QStringList Widget::getUsbDriveLetters()
 void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)
 {
     QProcess process;
-    QString command = QString("net share %1=%2 /GRANT:everyone,Full").arg(shareName).arg(driveLetter + "\\");
-    process.start("cmd.exe", QStringList()<<"/c"<<command);
+    QString command = QString("net share %1=%2 /grant:everyone,Full").arg(shareName).arg(driveLetter);
+    qDebug()<<command;
+    process.start("cmd", QStringList() << "/c" << command);
     process.waitForFinished();
     QString output = process.readAllStandardOutput();
     QString errorOutput = process.readAllStandardError();
-    if(!output.isEmpty()){
-        qDebug()<<"共享创建成功"<<output;
+    if(!process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0){
+        qDebug()<<"Drive:"<<driveLetter<<"shared successfully as"<<shareName<<":"<<output;
     }
-    if(!errorOutput.isEmpty()){
-        qDebug()<<"错误："<<errorOutput;
+    else{
+        qWarning()<<"Error sharing drive"<<driveLetter<<":"<<errorOutput;
     }
+
 }
 
 QByteArray Widget::QStringListToByteArray(const QStringList &list)
