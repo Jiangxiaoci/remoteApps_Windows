@@ -33,11 +33,6 @@ Widget::Widget(QWidget *parent)
     connect(server,&QTcpServer::newConnection,this,&Widget::NewConnectionHandler);
     QStringList usbDriveLetters = getUsbDriveLetters();
     QByteArray Usbs=QStringListToByteArray(usbDriveLetters);
-    if(!usbDriveLetters.isEmpty()){
-        for(const QString& driveletter:usbDriveLetters){
-            shareUsbDrive(driveletter,"Shared_"+driveletter);
-        }
-    }
 }
 
 Widget::~Widget()
@@ -275,24 +270,24 @@ void Widget::on_OpenDesktop_clicked()
     QProcess::execute("explorer.exe",list);
     qDebug() << "Desktop path:" << desktopPath;
 }
+bool Widget::isRemovableDrive(const QString &drivePath)
+{
+    UINT driveType = GetDriveTypeW((LPCWSTR)drivePath.utf16());
+    return driveType == DRIVE_REMOVABLE;
+}
+
 QStringList Widget::getUsbDriveLetters()
 {
-    QString command = "wmic logicaldisk where drivetype=2 get deviceid";
-    QProcess process;
-    process.start(command);
-    process.waitForFinished();
-    QByteArray result=process.readAllStandardOutput();
-    qDebug()<<result;
-    QString Output=QString::fromLocal8Bit(result);
-    qDebug()<<Output;
-    QStringList drives = Output.split("\r\n",Qt::SkipEmptyParts);
-    QStringList usbdriveletters;
-    qDebug()<<"Removable drives:";
-    for(const QString &drive:drives){
-        qDebug()<<drive.trimmed();
-        usbdriveletters.append(drive.trimmed());
+    QList<QStorageInfo> storageList = QStorageInfo::mountedVolumes();
+    QStringList removable;
+    foreach (const QStorageInfo &storage,storageList ) {
+        if(isRemovableDrive(storage.rootPath())){
+            qDebug()<<"Removable Drive:"<<storage.rootPath();
+            removable.append(storage.rootPath().left(2));
+            shareUsbDrive(storage.rootPath().left(2),storage.rootPath().left(2));
+        }
     }
-    return usbdriveletters;
+    return removable;
 }
 void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)
 {
@@ -306,7 +301,7 @@ void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)
         qDebug()<<"共享创建成功"<<output;
     }
     if(!errorOutput.isEmpty()){
-
+        qDebug()<<"错误："<<errorOutput;
     }
 }
 

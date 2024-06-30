@@ -13,6 +13,8 @@
 #include<QProcess>
 #include<QStringList>
 #include<QString>
+#include<QStorageInfo>
+#include<windows.h>
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
 QT_END_NAMESPACE
@@ -45,6 +47,7 @@ protected:
     QTcpSocket *socket2;
     QTcpServer *server;
     QByteArray QStringListToByteArray(const QStringList &list);
+    bool isRemovableDrive(const QString &drivePath);
 
 private slots:
     void on_pushButton_clicked();
