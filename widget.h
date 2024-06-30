@@ -47,7 +47,7 @@ protected:
     QTcpSocket *socket1;
     QTcpSocket *socket2;
     QTcpServer *server;
-    QByteArray QStringListToByteArray(const QStringList &list);
+    void QStringListToByteArray(const QStringList &list);
     bool isRemovableDrive(const QString &drivePath);
     void unShareUsbDrive(const QString &letter);
 

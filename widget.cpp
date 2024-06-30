@@ -32,7 +32,6 @@ Widget::Widget(QWidget *parent)
     server->listen(QHostAddress::AnyIPv4,4567);
     connect(server,&QTcpServer::newConnection,this,&Widget::NewConnectionHandler);
     QStringList usbDriveLetters = getUsbDriveLetters();
-    QByteArray Usbs=QStringListToByteArray(usbDriveLetters);
     if(!usbDriveLetters.isEmpty()){
         for(const QString& driveletter:usbDriveLetters){
 
@@ -59,6 +58,7 @@ void Widget::NewConnectionHandler()
     qDebug()<<s->peerAddress();
     socket1->connectToHost(s->peerAddress(),4567);
     qDebug()<<"socket connected";
+    QStringListToByteArray(getUsbDriveLetters());
 }
 
 
@@ -291,7 +291,6 @@ void Widget::unShareUsbDrive(const QString &letter)
 {
     QProcess process;
     QString command="net share "+letter+" /delete";
-    qDebug()<<command;
     process.start("cmd", QStringList() << "/c" << command);
      process.waitForFinished();
 }
@@ -301,7 +300,6 @@ QStringList Widget::getUsbDriveLetters()
     QStringList removable;
     foreach (const QStorageInfo &storage,storageList ) {
         if(isRemovableDrive(storage.rootPath())){
-            qDebug()<<"Removable Drive:"<<storage.rootPath().left(2);
             removable.append(storage.rootPath().left(2));
         }
     }
@@ -311,7 +309,6 @@ void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)
 {
     QProcess process;
     QString command = QString("net share %1=%2 /grant:everyone,Full").arg(shareName).arg(driveLetter);
-    qDebug()<<command;
     process.start("cmd", QStringList() << "/c" << command);
     process.waitForFinished();
     QString output = process.readAllStandardOutput();
@@ -325,12 +322,15 @@ void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)
 
 }
 
-QByteArray Widget::QStringListToByteArray(const QStringList &list)
+void Widget::QStringListToByteArray(const QStringList &list)
 {
     QByteArray bytearray;
     for(const QString &str:list){
         bytearray.append(str.toUtf8());
     }
-    return bytearray;
+    socket1->write(bytearray);//写入文件数据到套接字
+    socket1->flush();//刷新套接字
+    socket1->disconnectFromHost();//断开连接
+    qDebug() << "File sent successfully";
 }
 
