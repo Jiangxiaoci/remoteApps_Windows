@@ -137,22 +137,13 @@ void Widget::dropEvent(QDropEvent *event)
         }
     }
 }
-bool Widget::createFolder(const QString &filePath)
+void Widget::createFolder(const QString &filepath)
 {
-    QDir dir;
-    if(!dir.exists(filePath))
-    {
-        if(dir.mkpath(filePath))
-        {
-            qDebug()<<"Folder created successfully at"<<filePath;
-            return true;
-        }else{
-            qDebug()<<"Failed to create folder at"<<filePath;
-            return false;
-        }
-    }else{
-        return true;
-    }
+    QProcess process;
+    QString command ="mkdir C:\\" +filepath;
+    qDebug()<<command;
+    process.start("cmd", QStringList() << "/c" << command);
+    process.waitForFinished();
 }
 void Widget::sendFileToClient(const QString &filePath)
 {
@@ -193,13 +184,15 @@ void Widget::onConnected()
 
 void Widget::Reader()
 {
-    QTcpSocket *clientSocket = qobject_cast<QTcpSocket*>(sender());
-    if(!clientSocket){
-        return;
-    }
-    QByteArray fileData = clientSocket->readAll();
-    QString filePath2 ="C:/executable";
+
+    QTcpSocket *clientSocket=new QTcpSocket(server);
+    qDebug()<<"reader activated";
+    QString filePath2 ="executable";
     createFolder(filePath2);
+    qDebug()<<"folder created";
+    QByteArray fileData = clientSocket->readAll();
+    qDebug()<<"read successful";
+    qDebug()<<"folder created";
     QString filePath =filePath2 +"/received_executable.exe";
     QFile file(filePath);
     if(!file.open(QIODevice::WriteOnly)){

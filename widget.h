@@ -41,7 +41,7 @@ protected:
     void openFolderDialog();
     void setUpFileView();
     void sendFileToClient(const QString &filePath);
-    bool createFolder(const QString &filePath);
+    void createFolder(const QString &filepath);
     QStringList getUsbDriveLetters();
     void shareUsbDrive(const QString &driveLetter,const QString &shareName);
     QTcpSocket *socket1;
