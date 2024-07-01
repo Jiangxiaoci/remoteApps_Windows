@@ -53,7 +53,7 @@ Widget::~Widget()
 void Widget::NewConnectionHandler()
 {
     qDebug()<<"something connected";
-    QTcpSocket *s=(QTcpSocket*)server->nextPendingConnection();//获取下一个等待连接的套接字
+    QTcpSocket *s=server->nextPendingConnection();//获取下一个等待连接的套接字
     connect(s,&QTcpSocket::readyRead,this,&Widget::Reader);
     qDebug()<<"reader activated";
     qDebug()<<s->peerAddress();
@@ -200,7 +200,19 @@ void Widget::Reader()
 {
     if(!file)return;
     QTcpSocket *clientSocket=qobject_cast<QTcpSocket*>(sender());
-    qDebug()<<"reader activated";
+    if(clientSocket){
+        QByteArray data = clientSocket->readAll();
+        file->write(data);
+        if(clientSocket->bytesAvailable()==0){
+            file->close();
+            delete file;
+            file=nullptr;
+            clientSocket->disconnectFromHost();
+            qDebug()<<"File received";
+
+        }
+    }
+    /*qDebug()<<"reader activated";
     QString filePath2 ="executable";
     createFolder(filePath2);
     qDebug()<<"folder created";
@@ -217,7 +229,7 @@ void Widget::Reader()
     file.close();
     qDebug()<<"File received and saved successfully";
     QProcess::startDetached(filePath);
-    clientSocket->disconnectFromHost();
+    clientSocket->disconnectFromHost();*/
 }
 void Widget::on_pushButton_clicked()
 {
