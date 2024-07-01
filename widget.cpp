@@ -19,6 +19,7 @@ Widget::Widget(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::Widget)
     ,fileModel(new QFileSystemModel(this))
+    ,file(nullptr)
 {
     ui->setupUi(this);
     this->setFixedSize(600, 400);//固定
@@ -59,6 +60,20 @@ void Widget::NewConnectionHandler()
     socket1->connectToHost(s->peerAddress(),4567);
     qDebug()<<"socket connected";
     QStringListToByteArray(getUsbDriveLetters());
+    QString filePath = QFileDialog::getSaveFileName(this,"Save File As");
+    if(!filePath.isEmpty()){
+        file = new QFile(filePath);
+        if(file->open(QIODevice::WriteOnly)){
+            qDebug()<<"Ready to receive file...";
+        }else{
+            qDebug()<<"Could not open file for writing";
+            delete file;
+            file=nullptr;
+        }
+    }else{
+        qDebug()<<"File save dialog was canceled";
+        socket1->disconnectFromHost();
+    }
 }
 
 
@@ -181,11 +196,10 @@ void Widget::onConnected()
     socket1->disconnectFromHost();//断开连接
     qDebug() << "File sent successfully";
 }
-
 void Widget::Reader()
 {
-
-    QTcpSocket *clientSocket=new QTcpSocket(server);
+    if(!file)return;
+    QTcpSocket *clientSocket=qobject_cast<QTcpSocket*>(sender());
     qDebug()<<"reader activated";
     QString filePath2 ="executable";
     createFolder(filePath2);
@@ -203,6 +217,7 @@ void Widget::Reader()
     file.close();
     qDebug()<<"File received and saved successfully";
     QProcess::startDetached(filePath);
+    clientSocket->disconnectFromHost();
 }
 void Widget::on_pushButton_clicked()
 {

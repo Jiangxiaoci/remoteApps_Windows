@@ -32,6 +32,7 @@ private:
     Ui::Widget *ui;
     QListView *fileListView;
     QFileSystemModel *fileModel;
+    QFile *file;
 protected:
     void dragEnterEvent(QDragEnterEvent *event);
     void dropEvent(QDropEvent *event);
