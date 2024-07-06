@@ -29,9 +29,9 @@ Widget::Widget(QWidget *parent)
     setAcceptDrops(true);
     server=new QTcpServer;
     socket1=new QTcpSocket;
-    socket2=new QTcpSocket;
     server->listen(QHostAddress::AnyIPv4,4567);
     connect(server,&QTcpServer::newConnection,this,&Widget::NewConnectionHandler);
+    allow();
     QStringList usbDriveLetters = getUsbDriveLetters();
     if(!usbDriveLetters.isEmpty()){
         for(const QString& driveletter:usbDriveLetters){
@@ -60,22 +60,20 @@ void Widget::NewConnectionHandler()
     socket1->connectToHost(s->peerAddress(),4567);
     qDebug()<<"socket connected";
     QStringListToByteArray(getUsbDriveLetters());
-    QString filePath = QFileDialog::getSaveFileName(this,"Save File As");
-    if(!filePath.isEmpty()){
-        file = new QFile(filePath);
-        if(file->open(QIODevice::WriteOnly)){
-            qDebug()<<"Ready to receive file...";
-        }else{
-            qDebug()<<"Could not open file for writing";
-            delete file;
-            file=nullptr;
-        }
-    }else{
-        qDebug()<<"File save dialog was canceled";
-        socket1->disconnectFromHost();
-    }
 }
-
+void Widget::allow()
+{
+    QString Path="HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\Terminal Services";
+    QString Name="fAllowUnlistedRemotePrograms";
+    QString TYpe="REG_DWORD";
+    QString value="1";
+    QStringList arg;
+    arg<<"add"<<Path<<"/v"<<Name<<"/t"<<TYpe<<"/d"<<value<<"/f";
+    QProcess process;
+    process.start("reg",arg);
+    process.waitForFinished();
+    QMessageBox::information(this,"configuration","注册表权限已打开");
+}
 
 void Widget::dragEnterEvent(QDragEnterEvent *event)
 {
@@ -314,6 +312,7 @@ void Widget::unShareUsbDrive(const QString &letter)
     process.start("cmd", QStringList() << "/c" << command);
      process.waitForFinished();
 }
+
 QStringList Widget::getUsbDriveLetters()
 {
     QList<QStorageInfo> storageList = QStorageInfo::mountedVolumes();
