@@ -44,7 +44,7 @@ Widget::Widget(QWidget *parent)
     }
 
 }
-    usbup(usbDriveLetters);
+    usbup(getDrives());
 }
 Widget::~Widget()
 {
@@ -368,4 +368,18 @@ void Widget::usbup(const QStringList &removable)
         }
         file.close();
     }
+}
+
+QStringList Widget::getDrives()
+{
+    QList<QStorageInfo> storageList = QStorageInfo::mountedVolumes();
+    QStringList removable;
+    QString temp;
+    foreach (const QStorageInfo &storage,storageList ) {
+        temp=storage.rootPath().left(2);
+        qDebug()<<temp;
+        removable.append(temp);
+    }
+
+    return removable;
 }

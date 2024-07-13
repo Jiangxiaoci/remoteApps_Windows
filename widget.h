@@ -57,7 +57,7 @@ protected:
     void unShareUsbDrive(const QString &letter);
     void allow();
     void usbup(const QStringList &removable);
-
+    QStringList getDrives();
 private slots:
     void on_pushButton_clicked();
     void on_openFileButton_clicked();
