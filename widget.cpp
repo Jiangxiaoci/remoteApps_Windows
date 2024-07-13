@@ -32,22 +32,26 @@ Widget::Widget(QWidget *parent)
     server->listen(QHostAddress::AnyIPv4,4567);
     connect(server,&QTcpServer::newConnection,this,&Widget::NewConnectionHandler);
     allow();
+    createFolder("C:\\Test");
     QStringList usbDriveLetters = getUsbDriveLetters();
     if(!usbDriveLetters.isEmpty()){
         for(const QString& driveletter:usbDriveLetters){
-
+            qDebug()<<driveletter;
             if(!driveletter.isEmpty())
             {
             shareUsbDrive(driveletter,driveletter[0]);
         }
     }
+
 }
+    usbup(usbDriveLetters);
 }
 Widget::~Widget()
 {
     for(const QString driveletter:getUsbDriveLetters()) {
         unShareUsbDrive(driveletter[0]);
     }
+    //remove("C:\\Test\\output.txt");
     delete ui;
 }
 void Widget::NewConnectionHandler()
@@ -74,6 +78,7 @@ void Widget::allow()
     process.waitForFinished();
     QMessageBox::information(this,"configuration","注册表权限已打开");
 }
+
 
 void Widget::dragEnterEvent(QDragEnterEvent *event)
 {
@@ -153,7 +158,7 @@ void Widget::dropEvent(QDropEvent *event)
 void Widget::createFolder(const QString &filepath)
 {
     QProcess process;
-    QString command ="mkdir C:\\" +filepath;
+    QString command ="mkdir " +filepath;
     qDebug()<<command;
     process.start("cmd", QStringList() << "/c" << command);
     process.waitForFinished();
@@ -353,3 +358,14 @@ void Widget::QStringListToByteArray(const QStringList &list)
     qDebug() << "File sent successfully";
 }
 
+void Widget::usbup(const QStringList &removable)
+{
+    QFile file("C:\\Test\\output.txt");
+    if(file.open(QIODevice::WriteOnly | QIODevice::Text)){
+        QTextStream out(&file);
+        for(const QString &str:removable){
+            out<<str<<"\n";
+        }
+        file.close();
+    }
+}
