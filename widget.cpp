@@ -27,6 +27,7 @@ Widget::Widget(QWidget *parent)
     setUpFileView();
     ui->fileListView->setRootIndex(fileModel->index("C:\\Test"));
     setAcceptDrops(true);
+    getIP();
     server=new QTcpServer;
     socket1=new QTcpSocket;
     server->listen(QHostAddress::AnyIPv4,4567);
@@ -48,24 +49,22 @@ Widget::Widget(QWidget *parent)
 }
 Widget::~Widget()
 {
-    for(const QString driveletter:getUsbDriveLetters()) {
+    for(const QString driveletter:getUsbDriveLetters())
+    {
         unShareUsbDrive(driveletter[0]);
     }
-    //remove("C:\\Test\\output.txt");
     delete ui;
 }
 void Widget::NewConnectionHandler()
 {
     qDebug()<<"something connected";
     QTcpSocket *s=server->nextPendingConnection();//获取下一个等待连接的套接字
-    connect(s,&QTcpSocket::readyRead,this,&Widget::Reader);
     qDebug()<<"reader activated";
     qDebug()<<s->peerAddress();
     socket1->connectToHost(s->peerAddress(),4567);
     qDebug()<<"socket connected";
-    QStringListToByteArray(getUsbDriveLetters());
 }
-void Widget::allow()
+void Widget::allow()//打开共享权限
 {
     QString Path="HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\Terminal Services";
     QString Name="fAllowUnlistedRemotePrograms";
@@ -76,10 +75,18 @@ void Widget::allow()
     QProcess process;
     process.start("reg",arg);
     process.waitForFinished();
-    QMessageBox::information(this,"configuration","注册表权限已打开");
 }
-
-
+void  Widget::getIP() //获取ip地址
+{
+    QString localHostName = QHostInfo::localHostName();
+    QHostInfo info = QHostInfo::fromName(localHostName);
+    qDebug()<<"IP Address："<< info.addresses();
+    for(const QHostAddress &address:info.addresses())
+    {
+        if(address.protocol() == QAbstractSocket::IPv4Protocol)
+            ui->IP->setText(address.toString());
+    }
+}
 void Widget::dragEnterEvent(QDragEnterEvent *event)
 {
     if(event->mimeData()->hasUrls())
@@ -117,8 +124,6 @@ void Widget::dropEvent(QDropEvent *event)
                     qDebug() << "It's a .lnk file.";
                     // 例如：复制到目标位置
                     QFile file(filename);
-                    QString target="C:/Test";
-                    createFolder(target);
                     shortcutPath="C:/Test/"+baseName + ".lnk";
                     if (file.copy(shortcutPath))
                     {
@@ -149,13 +154,11 @@ void Widget::dropEvent(QDropEvent *event)
                 {
                     QMessageBox::warning(this,"Warning","Unsupported file ");
                 }
-                sendFileToClient(shortcutPath);
-
             }
         }
     }
 }
-void Widget::createFolder(const QString &filepath)
+void Widget::createFolder(const QString &filepath)//创建文件夹
 {
     QProcess process;
     QString command ="mkdir " +filepath;
@@ -163,88 +166,7 @@ void Widget::createFolder(const QString &filepath)
     process.start("cmd", QStringList() << "/c" << command);
     process.waitForFinished();
 }
-void Widget::sendFileToClient(const QString &filePath)
-{
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "Could not open file for reading";
-        return;
-    }
 
-    QByteArray fileData = file.readAll();
-    socket1->write(fileData);//写入文件数据到套接字
-    socket1->flush();//刷新套接字
-    file.close();
-    socket1->disconnectFromHost();//断开连接
-    qDebug() << "File sent successfully";
-}
-void Widget::onConnected()
-{
-    QString filePath = QFileDialog::getOpenFileName(nullptr, "Select File to Send");//打开文件对话框选择文件
-    if (filePath.isEmpty()) {
-        qDebug() << "No file selected";
-        return;
-    }
-
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        qDebug() << "Could not open file for reading";
-        return;
-    }
-
-    QByteArray fileData = file.readAll();
-    socket1->write(fileData);//写入文件数据到套接字
-    socket1->flush();//刷新套接字
-    file.close();
-    socket1->disconnectFromHost();//断开连接
-    qDebug() << "File sent successfully";
-}
-void Widget::Reader()
-{
-    if(!file)return;
-    QTcpSocket *clientSocket=qobject_cast<QTcpSocket*>(sender());
-    if(clientSocket){
-        QByteArray data = clientSocket->readAll();
-        file->write(data);
-        if(clientSocket->bytesAvailable()==0){
-            file->close();
-            delete file;
-            file=nullptr;
-            clientSocket->disconnectFromHost();
-            qDebug()<<"File received";
-
-        }
-    }
-    /*qDebug()<<"reader activated";
-    QString filePath2 ="executable";
-    createFolder(filePath2);
-    qDebug()<<"folder created";
-    QByteArray fileData = clientSocket->readAll();
-    qDebug()<<"read successful";
-    qDebug()<<"folder created";
-    QString filePath =filePath2 +"/received_executable.exe";
-    QFile file(filePath);
-    if(!file.open(QIODevice::WriteOnly)){
-        qDebug() << "Could not open file for writing";
-        return;
-    }
-    file.write(fileData);
-    file.close();
-    qDebug()<<"File received and saved successfully";
-    QProcess::startDetached(filePath);
-    clientSocket->disconnectFromHost();*/
-}
-void Widget::on_pushButton_clicked()
-{
-    onConnected();
-}
-void Widget::openFolderDialog() {
-    QString folderPath = QFileDialog::getExistingDirectory(this, tr("Open Folder"), "",
-    QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-    if (!folderPath.isEmpty()) {
-        fileListView->setRootIndex(fileModel->setRootPath(folderPath));
-    }
-}
 
 void Widget::setUpFileView()
 {
@@ -309,16 +231,18 @@ bool Widget::isRemovableDrive(const QString &drivePath)
     UINT driveType = GetDriveTypeW((LPCWSTR)drivePath.utf16());
     return driveType == DRIVE_REMOVABLE;
 }
-
-void Widget::unShareUsbDrive(const QString &letter)
+QStringList Widget::getDrives()//获取所有盘符
 {
-    QProcess process;
-    QString command="net share "+letter+" /delete";
-    process.start("cmd", QStringList() << "/c" << command);
-     process.waitForFinished();
+    QList<QStorageInfo> storageList = QStorageInfo::mountedVolumes();
+    QStringList removable;
+    QString temp;
+    foreach (const QStorageInfo &storage,storageList ) {
+        temp=storage.rootPath().left(2);
+        removable.append(temp);
+    }
+    return removable;
 }
-
-QStringList Widget::getUsbDriveLetters()
+QStringList Widget::getUsbDriveLetters()//获取可移动盘符
 {
     QList<QStorageInfo> storageList = QStorageInfo::mountedVolumes();
     QStringList removable;
@@ -329,7 +253,7 @@ QStringList Widget::getUsbDriveLetters()
     }
     return removable;
 }
-void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)
+void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)//打开可移动磁盘共享
 {
     QProcess process;
     QString command = QString("net share %1=%2 /grant:everyone,Full").arg(shareName).arg(driveLetter);
@@ -337,28 +261,17 @@ void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)
     process.waitForFinished();
     QString output = process.readAllStandardOutput();
     QString errorOutput = process.readAllStandardError();
-    if(!process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0){
-        qDebug()<<"Drive:"<<driveLetter<<"shared successfully as"<<shareName<<":"<<output;
-    }
-    else{
-        qWarning()<<"Error sharing drive"<<driveLetter<<":"<<errorOutput;
-    }
 
 }
-
-void Widget::QStringListToByteArray(const QStringList &list)
+void Widget::unShareUsbDrive(const QString &letter)//关闭可移动磁盘共享
 {
-    QByteArray bytearray;
-    for(const QString &str:list){
-        bytearray.append(str.toUtf8());
-    }
-    socket1->write(bytearray);//写入文件数据到套接字
-    socket1->flush();//刷新套接字
-    socket1->disconnectFromHost();//断开连接
-    qDebug() << "File sent successfully";
+    QProcess process;
+    QString command="net share "+letter+" /delete";
+    process.start("cmd", QStringList() << "/c" << command);
+    process.waitForFinished();
 }
 
-void Widget::usbup(const QStringList &removable)
+void Widget::usbup(const QStringList &removable)//将盘符上传
 {
     QFile file("C:\\Test\\output.txt");
     if(file.open(QIODevice::WriteOnly | QIODevice::Text)){
@@ -370,16 +283,7 @@ void Widget::usbup(const QStringList &removable)
     }
 }
 
-QStringList Widget::getDrives()
-{
-    QList<QStorageInfo> storageList = QStorageInfo::mountedVolumes();
-    QStringList removable;
-    QString temp;
-    foreach (const QStorageInfo &storage,storageList ) {
-        temp=storage.rootPath().left(2);
-        qDebug()<<temp;
-        removable.append(temp);
-    }
 
-    return removable;
-}
+
+
+

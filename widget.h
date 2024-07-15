@@ -20,6 +20,8 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<QRegularExpression>
+#include<QtNetwork>
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
 QT_END_NAMESPACE
@@ -41,9 +43,6 @@ protected:
     void dragEnterEvent(QDragEnterEvent *event);
     void dropEvent(QDropEvent *event);
     void NewConnectionHandler();
-    void onConnected();
-    void Reader();
-    void openFolderDialog();
     void setUpFileView();
     void sendFileToClient(const QString &filePath);
     void createFolder(const QString &filepath);
@@ -52,14 +51,13 @@ protected:
     QTcpSocket *socket1;
     QTcpSocket *socket2;
     QTcpServer *server;
-    void QStringListToByteArray(const QStringList &list);
     bool isRemovableDrive(const QString &drivePath);
     void unShareUsbDrive(const QString &letter);
     void allow();
     void usbup(const QStringList &removable);
     QStringList getDrives();
+    void getIP();
 private slots:
-    void on_pushButton_clicked();
     void on_openFileButton_clicked();
     void on_OpenDesktop_clicked();
 };
