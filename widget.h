@@ -46,12 +46,10 @@ protected:
     void setUpFileView();
     void sendFileToClient(const QString &filePath);
     void createFolder(const QString &filepath);
-    QStringList getUsbDriveLetters();
     void shareUsbDrive(const QString &driveLetter,const QString &shareName);
     QTcpSocket *socket1;
     QTcpSocket *socket2;
     QTcpServer *server;
-    bool isRemovableDrive(const QString &drivePath);
     void unShareUsbDrive(const QString &letter);
     void allow();
     void usbup(const QStringList &removable);
@@ -60,5 +58,6 @@ protected:
 private slots:
     void on_openFileButton_clicked();
     void on_OpenDesktop_clicked();
+    void on_management_clicked();
 };
 #endif // WIDGET_H

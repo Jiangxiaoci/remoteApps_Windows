@@ -34,7 +34,7 @@ Widget::Widget(QWidget *parent)
     connect(server,&QTcpServer::newConnection,this,&Widget::NewConnectionHandler);
     allow();
     createFolder("C:\\Test");
-    QStringList usbDriveLetters = getUsbDriveLetters();
+    QStringList usbDriveLetters = getDrives();
     if(!usbDriveLetters.isEmpty()){
         for(const QString& driveletter:usbDriveLetters){
             qDebug()<<driveletter;
@@ -45,11 +45,11 @@ Widget::Widget(QWidget *parent)
     }
 
 }
-    usbup(getDrives());
+    usbup(usbDriveLetters);
 }
 Widget::~Widget()
 {
-    for(const QString driveletter:getUsbDriveLetters())
+    for(const QString driveletter:getDrives())
     {
         unShareUsbDrive(driveletter[0]);
     }
@@ -226,11 +226,6 @@ void Widget::on_OpenDesktop_clicked()
     QProcess::execute("explorer.exe",list);
     qDebug() << "Desktop path:" << desktopPath;
 }
-bool Widget::isRemovableDrive(const QString &drivePath)
-{
-    UINT driveType = GetDriveTypeW((LPCWSTR)drivePath.utf16());
-    return driveType == DRIVE_REMOVABLE;
-}
 QStringList Widget::getDrives()//获取所有盘符
 {
     QList<QStorageInfo> storageList = QStorageInfo::mountedVolumes();
@@ -242,18 +237,7 @@ QStringList Widget::getDrives()//获取所有盘符
     }
     return removable;
 }
-QStringList Widget::getUsbDriveLetters()//获取可移动盘符
-{
-    QList<QStorageInfo> storageList = QStorageInfo::mountedVolumes();
-    QStringList removable;
-    foreach (const QStorageInfo &storage,storageList ) {
-        if(isRemovableDrive(storage.rootPath())){
-            removable.append(storage.rootPath().left(2));
-        }
-    }
-    return removable;
-}
-void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)//打开可移动磁盘共享
+void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)//打开共享
 {
     QProcess process;
     QString command = QString("net share %1=%2 /grant:everyone,Full").arg(shareName).arg(driveLetter);
@@ -263,7 +247,7 @@ void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)/
     QString errorOutput = process.readAllStandardError();
 
 }
-void Widget::unShareUsbDrive(const QString &letter)//关闭可移动磁盘共享
+void Widget::unShareUsbDrive(const QString &letter)//关闭磁盘共享
 {
     QProcess process;
     QString command="net share "+letter+" /delete";
@@ -273,7 +257,8 @@ void Widget::unShareUsbDrive(const QString &letter)//关闭可移动磁盘共享
 
 void Widget::usbup(const QStringList &removable)//将盘符上传
 {
-    QFile file("C:\\Test\\output.txt");
+    createFolder("C:\\Test\\config");
+    QFile file("C:\\Test\\config\\output.txt");
     if(file.open(QIODevice::WriteOnly | QIODevice::Text)){
         QTextStream out(&file);
         for(const QString &str:removable){
@@ -283,7 +268,11 @@ void Widget::usbup(const QStringList &removable)//将盘符上传
     }
 }
 
-
-
-
+void Widget::on_management_clicked()
+{
+    QProcess process;
+    QString command="appwiz.cpl";
+    process.start("cmd",QStringList()<<"/c"<<command);
+    process.waitForFinished();
+}
 

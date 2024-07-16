@@ -36,9 +36,9 @@
   <widget class="QPushButton" name="openFileButton">
    <property name="geometry">
     <rect>
-     <x>420</x>
+     <x>430</x>
      <y>280</y>
-     <width>91</width>
+     <width>101</width>
      <height>31</height>
     </rect>
    </property>
@@ -49,14 +49,27 @@
   <widget class="QPushButton" name="OpenDesktop">
    <property name="geometry">
     <rect>
-     <x>90</x>
+     <x>80</x>
      <y>280</y>
-     <width>91</width>
+     <width>101</width>
      <height>31</height>
     </rect>
    </property>
    <property name="text">
-    <string>OpenDesktop</string>
+    <string>Open Explorer</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="management">
+   <property name="geometry">
+    <rect>
+     <x>260</x>
+     <y>280</y>
+     <width>101</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Management</string>
    </property>
   </widget>
  </widget>
