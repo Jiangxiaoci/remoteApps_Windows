@@ -42,7 +42,6 @@ private:
 protected:
     void dragEnterEvent(QDragEnterEvent *event);
     void dropEvent(QDropEvent *event);
-    void NewConnectionHandler();
     void setUpFileView();
     void sendFileToClient(const QString &filePath);
     void createFolder(const QString &filepath);
@@ -59,5 +58,6 @@ private slots:
     void on_openFileButton_clicked();
     void on_OpenDesktop_clicked();
     void on_management_clicked();
+    void sharefolder(const QString &folder,const QString&folderpath);
 };
 #endif // WIDGET_H

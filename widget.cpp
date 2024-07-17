@@ -23,17 +23,14 @@ Widget::Widget(QWidget *parent)
 {
     ui->setupUi(this);
     this->setFixedSize(600, 400);//固定
-    this->setWindowTitle("Remote Apps");
+    this->setWindowTitle("RemoteApp");
     setUpFileView();
     ui->fileListView->setRootIndex(fileModel->index("C:\\Test"));
     setAcceptDrops(true);
     getIP();
-    server=new QTcpServer;
-    socket1=new QTcpSocket;
-    server->listen(QHostAddress::AnyIPv4,4567);
-    connect(server,&QTcpServer::newConnection,this,&Widget::NewConnectionHandler);
     allow();
     createFolder("C:\\Test");
+    sharefolder("Test","C:\\Test");
     QStringList usbDriveLetters = getDrives();
     if(!usbDriveLetters.isEmpty()){
         for(const QString& driveletter:usbDriveLetters){
@@ -55,15 +52,7 @@ Widget::~Widget()
     }
     delete ui;
 }
-void Widget::NewConnectionHandler()
-{
-    qDebug()<<"something connected";
-    QTcpSocket *s=server->nextPendingConnection();//获取下一个等待连接的套接字
-    qDebug()<<"reader activated";
-    qDebug()<<s->peerAddress();
-    socket1->connectToHost(s->peerAddress(),4567);
-    qDebug()<<"socket connected";
-}
+
 void Widget::allow()//打开共享权限
 {
     QString Path="HKEY_LOCAL_MACHINE\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\Terminal Services";
@@ -243,10 +232,8 @@ void Widget::shareUsbDrive(const QString &driveLetter,const QString &shareName)/
     QString command = QString("net share %1=%2 /grant:everyone,Full").arg(shareName).arg(driveLetter);
     process.start("cmd", QStringList() << "/c" << command);
     process.waitForFinished();
-    QString output = process.readAllStandardOutput();
-    QString errorOutput = process.readAllStandardError();
-
 }
+
 void Widget::unShareUsbDrive(const QString &letter)//关闭磁盘共享
 {
     QProcess process;
@@ -275,4 +262,13 @@ void Widget::on_management_clicked()
     process.start("cmd",QStringList()<<"/c"<<command);
     process.waitForFinished();
 }
+
+void Widget::sharefolder(const QString &sharename,const QString &folderpath)
+{
+    QProcess process;
+    QString command=QString("net share %1=%2 /grant:everyone,Full").arg(sharename).arg(folderpath);
+    process.start("cmd", QStringList() << "/c" << command);
+    process.waitForFinished();
+}
+
 
